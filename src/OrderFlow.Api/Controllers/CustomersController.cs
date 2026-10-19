@@ -1,11 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
 using OrderFlow.Application.Dtos;
 using OrderFlow.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OrderFlow.Api.Controllers;
 
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/[controller]")]
+
+
 public class CustomersController : ControllerBase
 {
     private readonly ICustomerService _service;

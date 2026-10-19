@@ -27,6 +27,8 @@ public class ExceptionHandlingMiddleware
             {
                 NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
                 ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
+                AuthenticationFailedException => (StatusCodes.Status401Unauthorized, "Authentication failed"),
+                ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
                 DomainException => (StatusCodes.Status400BadRequest, "Business rule violated"),
                 _ => (StatusCodes.Status500InternalServerError, "Server error")
             };
@@ -39,7 +41,6 @@ public class ExceptionHandlingMiddleware
             {
                 Status = status,
                 Title = title,
-                // never leak internal error details to the client
                 Detail = status == 500 ? "An unexpected error occurred." : ex.Message
             });
         }

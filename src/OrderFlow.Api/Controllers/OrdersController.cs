@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using OrderFlow.Application.Dtos;
 using OrderFlow.Application.Services;
 using OrderFlow.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OrderFlow.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
+
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _service;
@@ -32,6 +35,7 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<OrderDto>> Pay(int id, CancellationToken ct) =>
         Ok(await _service.PayAsync(id, ct));
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("{id:int}/ship")]
     public async Task<ActionResult<OrderDto>> Ship(int id, CancellationToken ct) =>
         Ok(await _service.ShipAsync(id, ct));

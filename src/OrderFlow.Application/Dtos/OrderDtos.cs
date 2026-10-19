@@ -16,6 +16,6 @@ public record OrderLineRequest
 
 public record CreateOrderRequest
 {
-    [Range(1, int.MaxValue)] public int CustomerId { get; init; }
+    public int? CustomerId { get; init; }   // admins must provide it; customers' id comes from their token
     [Required, MinLength(1)] public List<OrderLineRequest> Items { get; init; } = new();
 }

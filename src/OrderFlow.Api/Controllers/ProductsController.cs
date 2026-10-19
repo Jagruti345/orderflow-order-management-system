@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OrderFlow.Application.Dtos;
 using OrderFlow.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace OrderFlow.Api.Controllers;
 
