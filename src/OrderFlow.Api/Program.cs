@@ -1,15 +1,19 @@
+using OrderFlow.Api.Middleware;
+using OrderFlow.Application;
+using OrderFlow.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddApplication();                            // registers our services
+builder.Services.AddInfrastructure(builder.Configuration);   // registers DbContext
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<ExceptionHandlingMiddleware>();   // first, so it catches errors from everything after it
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -17,9 +21,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
