@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using OrderFlow.Application.Dtos;
 using OrderFlow.Application.Services;
 using Microsoft.AspNetCore.Authorization;
+using OrderFlow.Application.Common;
 
 namespace OrderFlow.Api.Controllers;
 
@@ -17,9 +18,8 @@ public class CustomersController : ControllerBase
     public CustomersController(ICustomerService service) => _service = service;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CustomerDto>>> GetAll(CancellationToken ct) =>
-        Ok(await _service.GetAllAsync(ct));
-
+public async Task<ActionResult<PagedResult<CustomerDto>>> GetAll([FromQuery] CustomerQuery query, CancellationToken ct) =>
+    Ok(await _service.GetAllAsync(query, ct));
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CustomerDto>> GetById(int id, CancellationToken ct) =>
         Ok(await _service.GetByIdAsync(id, ct));

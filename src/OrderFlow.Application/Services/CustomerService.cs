@@ -7,9 +7,10 @@ namespace OrderFlow.Application.Services;
 
 public interface ICustomerService
 {
-    Task<IReadOnlyList<CustomerDto>> GetAllAsync(CancellationToken ct = default);
+    Task<PagedResult<CustomerDto>> GetAllAsync(CustomerQuery query, CancellationToken ct = default);
     Task<CustomerDto> GetByIdAsync(int id, CancellationToken ct = default);
     Task<CustomerDto> CreateAsync(CreateCustomerRequest request, CancellationToken ct = default);
+    
 }
 
 public class CustomerService : ICustomerService
@@ -18,15 +19,27 @@ public class CustomerService : ICustomerService
 
     public CustomerService(IApplicationDbContext db) => _db = db;
 
-    public async Task<IReadOnlyList<CustomerDto>> GetAllAsync(CancellationToken ct = default)
+   public async Task<PagedResult<CustomerDto>> GetAllAsync(CustomerQuery query, CancellationToken ct = default)
+{
+    var q = _db.Customers.AsNoTracking();
+
+    if (!string.IsNullOrWhiteSpace(query.Search))
     {
-        return await _db.Customers
-            .AsNoTracking()
-            .OrderBy(c => c.FullName)
-            .Select(c => new CustomerDto(c.Id, c.FullName, c.Email, c.Phone))
-            .ToListAsync(ct);
+        var term = query.Search.Trim();
+        q = q.Where(c => c.FullName.Contains(term) || c.Email.Contains(term));
     }
 
+    var total = await q.CountAsync(ct);
+
+    var items = await q
+        .OrderBy(c => c.FullName).ThenBy(c => c.Id)
+        .Skip((query.Page - 1) * query.PageSize)
+        .Take(query.PageSize)
+        .Select(c => new CustomerDto(c.Id, c.FullName, c.Email, c.Phone))
+        .ToListAsync(ct);
+
+    return new PagedResult<CustomerDto>(items, query.Page, query.PageSize, total);
+}
     public async Task<CustomerDto> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var customer = await _db.Customers.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct)

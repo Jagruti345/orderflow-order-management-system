@@ -19,3 +19,8 @@ public record OrderQuery : PageQuery
 {
     public OrderStatus? Status { get; init; }
 }
+
+public record CustomerQuery : PageQuery
+{
+    [StringLength(100)] public string? Search { get; init; }
+}
