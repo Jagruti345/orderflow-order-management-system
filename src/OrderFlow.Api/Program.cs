@@ -14,6 +14,7 @@ using OrderFlow.Infrastructure;
 using OrderFlow.Infrastructure.Auth;
 using OrderFlow.Infrastructure.Persistence;
 using Serilog;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -144,17 +145,28 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// Apply pending migrations at startup. Off by default; docker-compose turns it on.
+// (Large production systems usually run migrations as a separate deployment step instead.)
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 await DbSeeder.SeedAdminAsync(app.Services, app.Configuration);
 
 // ---------- Middleware pipeline (order matters) ----------
 app.UseSerilogRequestLogging();                     // one log line per request: method, path, status, time
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+if (app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 
 app.UseHttpsRedirection();
 app.UseRateLimiter();        // reject abusive traffic before doing any real work

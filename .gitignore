@@ -487,3 +487,5 @@ logs/
 
 TestResults/
 coverage/
+
+.env
