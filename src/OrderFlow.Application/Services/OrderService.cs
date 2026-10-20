@@ -10,6 +10,7 @@ namespace OrderFlow.Application.Services;
 public interface IOrderService
 {
     Task<IReadOnlyList<OrderDto>> GetAllAsync(OrderStatus? status, CancellationToken ct = default);
+    Task<PagedResult<OrderDto>> GetAllAsync(OrderQuery query, CancellationToken ct = default);
     Task<OrderDto> GetByIdAsync(int id, CancellationToken ct = default);
     Task<OrderDto> CreateAsync(CreateOrderRequest request, CancellationToken ct = default);
     Task<OrderDto> PayAsync(int id, CancellationToken ct = default);
@@ -27,6 +28,32 @@ public class OrderService : IOrderService
         _db = db;
         _currentUser = currentUser;
     }
+
+    public async Task<PagedResult<OrderDto>> GetAllAsync(OrderQuery query, CancellationToken ct = default)
+{
+    var q = _db.Orders.AsNoTracking();
+
+    if (!_currentUser.IsAdmin)
+    {
+        var customerId = _currentUser.CustomerId
+            ?? throw new ForbiddenException("Your account is not linked to a customer.");
+        q = q.Where(o => o.CustomerId == customerId);   // customers only see their own orders
+    }
+
+    if (query.Status.HasValue)
+        q = q.Where(o => o.Status == query.Status.Value);
+
+    var total = await q.CountAsync(ct);
+
+    var orders = await q
+        .Include(o => o.Items)
+        .OrderByDescending(o => o.CreatedAtUtc).ThenByDescending(o => o.Id)
+        .Skip((query.Page - 1) * query.PageSize)
+        .Take(query.PageSize)
+        .ToListAsync(ct);
+
+    return new PagedResult<OrderDto>(orders.Select(ToDto).ToList(), query.Page, query.PageSize, total);
+}
 
     public async Task<IReadOnlyList<OrderDto>> GetAllAsync(OrderStatus? status, CancellationToken ct = default)
     {

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OrderFlow.Application.Common;
 using OrderFlow.Domain.Exceptions;
 
@@ -23,26 +24,27 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            var (status, title) = ex switch
+            var (status, title, detail) = ex switch
             {
-                NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
-                ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
-                AuthenticationFailedException => (StatusCodes.Status401Unauthorized, "Authentication failed"),
-                ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
-                DomainException => (StatusCodes.Status400BadRequest, "Business rule violated"),
-                _ => (StatusCodes.Status500InternalServerError, "Server error")
+                NotFoundException => (StatusCodes.Status404NotFound, "Resource not found", ex.Message),
+                ConflictException => (StatusCodes.Status409Conflict, "Conflict", ex.Message),
+                AuthenticationFailedException => (StatusCodes.Status401Unauthorized, "Authentication failed", ex.Message),
+                ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden", ex.Message),
+                DomainException => (StatusCodes.Status400BadRequest, "Business rule violated", ex.Message),
+                DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Concurrency conflict",
+                    "The data was changed by another request. Please retry."),
+                _ => (StatusCodes.Status500InternalServerError, "Server error", "An unexpected error occurred.")
             };
 
             if (status == StatusCodes.Status500InternalServerError)
-                _logger.LogError(ex, "Unhandled exception");
+                _logger.LogError(ex, "Unhandled exception on {Method} {Path}", context.Request.Method, context.Request.Path);
+            else if (ex is DbUpdateConcurrencyException)
+                _logger.LogWarning("Concurrency conflict on {Method} {Path}", context.Request.Method, context.Request.Path);
 
             context.Response.StatusCode = status;
-            await context.Response.WriteAsJsonAsync(new ProblemDetails
-            {
-                Status = status,
-                Title = title,
-                Detail = status == 500 ? "An unexpected error occurred." : ex.Message
-            });
+            var problem = new ProblemDetails { Status = status, Title = title, Detail = detail };
+            problem.Extensions["traceId"] = context.TraceIdentifier;   // the client can quote this when reporting a bug
+            await context.Response.WriteAsJsonAsync(problem);
         }
     }
 }

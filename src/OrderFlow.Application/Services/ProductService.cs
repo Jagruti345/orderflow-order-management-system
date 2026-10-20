@@ -7,7 +7,7 @@ namespace OrderFlow.Application.Services;
 
 public interface IProductService
 {
-    Task<IReadOnlyList<ProductDto>> GetAllAsync(CancellationToken ct = default);
+    Task<PagedResult<ProductDto>> GetAllAsync(ProductQuery query, CancellationToken ct = default);
     Task<ProductDto> GetByIdAsync(int id, CancellationToken ct = default);
     Task<ProductDto> CreateAsync(CreateProductRequest request, CancellationToken ct = default);
     Task<ProductDto> UpdateAsync(int id, UpdateProductRequest request, CancellationToken ct = default);
@@ -19,13 +19,29 @@ public class ProductService : IProductService
 
     public ProductService(IApplicationDbContext db) => _db = db;
 
-    public async Task<IReadOnlyList<ProductDto>> GetAllAsync(CancellationToken ct = default)
+    public async Task<PagedResult<ProductDto>> GetAllAsync(ProductQuery query, CancellationToken ct = default)
     {
-        return await _db.Products
-            .AsNoTracking()                       // read-only query: faster
-            .OrderBy(p => p.Name)
+        var q = _db.Products.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim();
+            q = q.Where(p => p.Name.Contains(term));      // becomes SQL: WHERE Name LIKE '%term%'
+        }
+
+        if (query.InStock == true)
+            q = q.Where(p => p.StockQuantity > 0);
+
+        var total = await q.CountAsync(ct);               // total BEFORE paging, so clients can build page links
+
+        var items = await q
+            .OrderBy(p => p.Name).ThenBy(p => p.Id)       // paging needs a stable, unique order
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
             .Select(p => new ProductDto(p.Id, p.Name, p.Description, p.Price, p.StockQuantity))
             .ToListAsync(ct);
+
+        return new PagedResult<ProductDto>(items, query.Page, query.PageSize, total);
     }
 
     public async Task<ProductDto> GetByIdAsync(int id, CancellationToken ct = default)
@@ -46,11 +62,11 @@ public class ProductService : IProductService
 
     public async Task<ProductDto> UpdateAsync(int id, UpdateProductRequest request, CancellationToken ct = default)
     {
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct)   // tracked
+        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException($"Product {id} was not found.");
 
         product.UpdateDetails(request.Name, request.Description ?? string.Empty, request.Price);
-        await _db.SaveChangesAsync(ct);   // EF detects the change and writes the UPDATE
+        await _db.SaveChangesAsync(ct);
         return ToDto(product);
     }
 

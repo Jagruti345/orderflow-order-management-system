@@ -13,5 +13,6 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.Description).HasMaxLength(1000);
         builder.Property(p => p.Price).HasPrecision(18, 2);
         builder.HasIndex(p => p.Name);
+        builder.Property(p => p.RowVersion).IsRowVersion();
     }
 }

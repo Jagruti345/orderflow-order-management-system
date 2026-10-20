@@ -5,7 +5,8 @@ namespace OrderFlow.Domain.Entities;
 
 public class Product : Entity
 {
-    private Product() { } // required by EF Core
+    private Product() { }
+     // required by EF Core
 
     public Product(string name, string description, decimal price, int stockQuantity)
     {
@@ -19,6 +20,7 @@ public class Product : Entity
     public string Description { get; private set; } = string.Empty;
     public decimal Price { get; private set; }
     public int StockQuantity { get; private set; }
+    public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
     public void UpdateDetails(string name, string description, decimal price)
     {
