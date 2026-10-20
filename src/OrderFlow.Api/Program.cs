@@ -172,3 +172,4 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check 
    .DisableRateLimiting();
 
 app.Run();
+public partial class Program { }
