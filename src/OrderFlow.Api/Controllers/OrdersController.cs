@@ -10,6 +10,7 @@ namespace OrderFlow.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _service;

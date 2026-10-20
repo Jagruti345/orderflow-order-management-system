@@ -40,9 +40,21 @@ public class ProductsController : ControllerBase
         await _cache.EvictByTagAsync("products", ct);   // cached lists are now stale
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
+    /// <summary>Creates a product. Admin only.</summary>
+/// <response code="201">The product was created.</response>
+/// <response code="400">Validation failed.</response>
+/// <response code="401">Missing or invalid token.</response>
+/// <response code="403">Logged in, but not an admin.</response>
+
 
     [Authorize(Roles = "Admin")]
     [HttpPut("{id:int}")]
+    
+[HttpPost]
+[ProducesResponseType(typeof(ProductDto), StatusCodes.Status201Created)]
+[ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ProductDto>> Update(int id, UpdateProductRequest request, CancellationToken ct)
     {
         var updated = await _service.UpdateAsync(id, request, ct);

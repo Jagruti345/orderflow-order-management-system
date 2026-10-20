@@ -122,27 +122,20 @@ builder.Services.AddHealthChecks()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Paste only the token. Swagger adds the 'Bearer ' prefix."
+        Title = "OrderFlow API",
+        Version = "v1",
+        Description = "E-commerce order management: catalog, customers and orders. " +
+                      "Log in via /api/auth/login, then use the Authorize button."
     });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
 
+    // Load the XML comment files from the Api and Application projects
+    foreach (var xmlFile in Directory.GetFiles(AppContext.BaseDirectory, "OrderFlow.*.xml"))
+        options.IncludeXmlComments(xmlFile, includeControllerXmlComments: true);
+
+    // ... your existing AddSecurityDefinition and AddSecurityRequirement stay here ...
+});
 var app = builder.Build();
 
 // Apply pending migrations at startup. Off by default; docker-compose turns it on.
